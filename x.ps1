@@ -53,14 +53,8 @@ $w.Content = $img
 $w.Cursor = [System.Windows.Input.Cursors]::None
 $w.ShowInTaskbar = $false
 
-$block = { param($s,$e) $e.Handled = $true }
-$w.Add_PreviewKeyDown($block)
-$w.Add_PreviewKeyUp($block)
-$w.Add_PreviewTextInput($block)
-$w.Add_PreviewMouseDown($block)
-$w.Add_PreviewMouseUp($block)
-$w.Add_PreviewMouseMove($block)
-$w.Add_PreviewMouseWheel($block)
+$escHandler = { param($s,$e) if ($e.Key -eq "Escape") { $w.Close() } }
+$w.Add_KeyDown($escHandler)
 
 try { $w.ShowDialog() | Out-Null }
 finally {
