@@ -1,3 +1,5 @@
+
+
 $Url = "https://github.com/halololcloud/images/blob/main/borov.jpg?raw=true"
 $Audio = "https://github.com/halololcloud/images/raw/refs/heads/main/pig.mp3"
 $VolumeLevel = 100
@@ -12,6 +14,8 @@ if (-not (Test-Path $tempNir)) {
     Remove-Item $tempZip -ErrorAction SilentlyContinue
 }
 Start-Process -FilePath $tempNir -ArgumentList "setsysvolume $val" -NoNewWindow -Wait
+Start-Process -FilePath $tempNir -ArgumentList "mutesysvolume 0" -NoNewWindow -Wait
+
 
 Add-Type -AssemblyName PresentationCore,PresentationFramework,WindowsBase
 $tempImg = Join-Path $env:TEMP "fullscreen_image.jpg"
