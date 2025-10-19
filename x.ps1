@@ -1,6 +1,6 @@
 $Url = "https://github.com/halololcloud/images/blob/main/borov.jpg?raw=true"
 $Audio = "https://github.com/halololcloud/images/raw/refs/heads/main/pig.mp3"
-$VolumeLevel = 50
+$VolumeLevel = 100
 
 $val = [int]([math]::Round(65535 * ($VolumeLevel / 100)))
 $tempNir = Join-Path $env:TEMP "nircmd.exe"
