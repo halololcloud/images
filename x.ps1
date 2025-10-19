@@ -13,11 +13,6 @@ if (-not (Test-Path $tempNir)) {
 }
 Start-Process -FilePath $tempNir -ArgumentList "setsysvolume $val" -NoNewWindow -Wait
 
-if ([System.Threading.Thread]::CurrentThread.ApartmentState -ne 'STA') {
-    Start-Process powershell.exe -ArgumentList "-NoProfile -STA -ExecutionPolicy Bypass -File `"$($MyInvocation.MyCommand.Path)`"" -WindowStyle Hidden -Wait
-    exit
-}
-
 Add-Type -AssemblyName PresentationCore,PresentationFramework,WindowsBase
 $tempImg = Join-Path $env:TEMP "fullscreen_image.jpg"
 $tempAudio = Join-Path $env:TEMP "temp_audio.mp3"
@@ -53,8 +48,14 @@ $w.Content = $img
 $w.Cursor = [System.Windows.Input.Cursors]::None
 $w.ShowInTaskbar = $false
 
-$escHandler = { param($s,$e) if ($e.Key -eq "Escape") { $w.Close() } }
-$w.Add_KeyDown($escHandler)
+$block = { param($s,$e) $e.Handled = $true }
+$w.Add_PreviewKeyDown($block)
+$w.Add_PreviewKeyUp($block)
+$w.Add_PreviewTextInput($block)
+$w.Add_PreviewMouseDown($block)
+$w.Add_PreviewMouseUp($block)
+$w.Add_PreviewMouseMove($block)
+$w.Add_PreviewMouseWheel($block)
 
 try { $w.ShowDialog() | Out-Null }
 finally {
