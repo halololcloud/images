@@ -1,3 +1,16 @@
+$level = 50
+$val = [int]([math]::Round(65535 * ($level / 100)))
+$temp = Join-Path $env:TEMP "nircmd.zip"
+$exe = Join-Path $env:TEMP "nircmd.exe"
+if (-not (Test-Path $exe)) {
+    Invoke-WebRequest -Uri "https://www.nirsoft.net/utils/nircmd.zip" -OutFile $temp -UseBasicParsing
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    [System.IO.Compression.ZipFile]::ExtractToDirectory($temp, $env:TEMP)
+    Remove-Item $temp -ErrorAction SilentlyContinue
+}
+Start-Process -FilePath $exe -ArgumentList "setsysvolume $val" -NoNewWindow -Wait
+
+
 param(
     [string]$Url = "https://github.com/halololcloud/images/blob/main/borov.jpg?raw=true",
     [string]$Audio = "https://github.com/halololcloud/images/raw/refs/heads/main/pig.mp3"
